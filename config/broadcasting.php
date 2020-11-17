@@ -42,10 +42,6 @@ return [
                 'host' => env('ECHO_HOST','127.0.0.1'),
                 'port' => env('ECHO_PORT',6001),
                 'scheme' => env('ECHO_SCHEME','http'),
-                'curl_options' => [
-                    CURLOPT_SSL_VERIFYHOST => 0,
-                    CURLOPT_SSL_VERIFYPEER => 0,
-                ]
             ],
         ],
 

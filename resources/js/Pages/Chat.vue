@@ -10,7 +10,7 @@
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg flex" style="min-height: 600px; max-height: 600px">
                     <!-- list users -->
-                    <div class="w-3/12 bg-gray-200 bg-opacity-25 border-r border-gray-200 overflow-y-scroll-auto">
+                    <div class="w-3/12 bg-gray-200 bg-opacity-25 border-r border-gray-200 overflow-y-scroll">
                         <ul>
                             <li
                                 v-for="(user, index) in users"
@@ -20,7 +20,7 @@
                                 class="p-6 text-lg text-gray-600 leading-7 font-semibold border-b border-gray-200 hover:bg-gray-200 hover:bg-opacity-50 hover:cursor-pointer">
                                 <p class="flex items-center">
                                     {{ user.name }}
-                                    <span class="ml-2 w-2 h-2 bg-blue-500 rounded-full"></span>
+                                    <span v-if="user.notification" class="ml-2 w-2 h-2 bg-blue-500 rounded-full"></span>
                                 </p>
                             </li>
                         </ul>
@@ -71,6 +71,7 @@
 </template>
 
 <script>
+    import Vue from 'vue'
     import AppLayout from '@/Layouts/AppLayout'
     import store from "../store";
 
@@ -90,6 +91,23 @@
             axios.get('api/users').then(response => {
                 this.users = response.data
             })
+
+            Echo.private(`user.${this.user.id}`).listen('.SendMessage', async (e) => {
+                if (this.userActive && this.userActive === e.message.from) {
+                    await this.messages.push(e.message)
+                    this.scrollToButton()
+                } else {
+                    const user = this.users.filter((user)=>{
+                        if (user.id === e.message.from) {
+                            return user
+                        }
+                    })
+
+                    if (user) {
+                        Vue.set(user[0], 'notification', true)
+                    }
+                }
+            })
         },
         methods: {
             scrollToButton() {
@@ -102,6 +120,17 @@
                 await axios.get(`api/messages/${userId}`).then(response => {
                     this.messages = response.data
                 })
+
+                const user = this.users.filter((user)=>{
+                    if (user.id === userId) {
+                        return user
+                    }
+                })
+
+                if (user) {
+                    Vue.set(user[0], 'notification', false)
+                }
+
                 this.scrollToButton();
             },
             async sendMessage() {
