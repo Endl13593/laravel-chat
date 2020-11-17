@@ -1,0 +1,88 @@
+version: '3'
+
+networks:
+  network-laravel-chat:
+
+services:
+  nginx:
+    image: nginx:1.18.0-alpine
+    container_name: app-nginx-laravel-chat
+    ports:
+      - "80:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php
+      - mysql
+    networks:
+      - network-laravel-chat
+  php:
+    build: docker/php-fpm
+    container_name: php-laravel-chat
+    entrypoint: dockerize -wait tcp://${DB_HOST}:3306 -timeout 60s /entrypoint.sh
+    environment:
+      CONTAINER_NAME: PHP
+#      COMPOSER_AUTH: "${COMPOSER_AUTH}"
+    #user: "1000:1000"
+    volumes:
+      - ./:/var/www/html
+    expose:
+      - "9000"
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - network-laravel-chat
+  websockets:
+    build: docker/websockets-laravel
+    container_name: websockets-laravel-chat
+    ports:
+      - "6001:6001"
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - network-laravel-chat
+    environment:
+      CONTAINER_NAME: APP_WEBSOCKETS
+  mysql:
+    image: mysql:5.7.29
+    container_name: mysql-laravel-chat
+    command: --innodb-use-native-aio=0
+    restart: unless-stopped
+    tty: true
+    volumes:
+      - .docker/mysql-data:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: "${DB_DATABASE}"
+      MYSQL_USER:     "${DB_USERNAME}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql-laravel-chat
+    networks:
+      - network-laravel-chat
+  redis:
+    image: redis:alpine3.11
+    container_name: redis-laravel-chat
+    expose:
+      - 6379
+    ports:
+      - "6379:6379"
+    networks:
+      - network-laravel-chat
+  phpmyadmin:
+    build: docker/phpmyadmin
+    container_name: phpmyadmin-laravel-chat
+    environment:
+      PMA_ARBITRARY: 1
+    ports:
+      - "8080:80"
+    volumes:
+      - .docker/phpmyadmin/data/sessions:/sessions
+    networks:
+      - network-laravel-chat
+
